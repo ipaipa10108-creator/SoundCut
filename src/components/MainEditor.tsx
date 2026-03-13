@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAudioStore } from '../store/useAudioStore';
-import { drawWaveform, formatRulerTime } from '../utils/waveformDraw';
+import { drawWaveform, drawSecondaryWaveform, formatRulerTime } from '../utils/waveformDraw';
 import { Play, Pause, Scissors, Volume2, Target, Search, Layers, X } from 'lucide-react';
 import { amplifyBufferRegion, cutoutBufferRegion, sliceAudioBuffer, findSegmentsByVolume, findSegmentsByFrequency } from '../utils/audioOperations';
 import type { Segment } from '../types/audio';
@@ -37,6 +37,7 @@ export default function MainEditor() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mixerCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
   
@@ -69,13 +70,35 @@ export default function MainEditor() {
             isMain: true,
             rulerHeight: 20
           });
+          
+          if (mixerCanvasRef.current) {
+             mixerCanvasRef.current.width = width;
+             mixerCanvasRef.current.height = height;
+             if (showMixerOnMain) {
+                drawSecondaryWaveform(mixerCanvasRef.current, placedClips, mainTrack.viewStartTime, mainTrack.viewEndTime);
+             }
+          }
         }
       }
     });
 
     resizeObserver.observe(container);
     return () => resizeObserver.disconnect();
-  }, [mainTrack.buffer, mainTrack.viewStartTime, mainTrack.viewEndTime]);
+  }, [mainTrack.buffer, mainTrack.viewStartTime, mainTrack.viewEndTime, showMixerOnMain, placedClips]);
+
+  // Redraw secondary waveform when clips or toggle changes
+  useEffect(() => {
+    if (mixerCanvasRef.current && mainTrack.buffer) {
+       if (showMixerOnMain) {
+          mixerCanvasRef.current.width = canvasRef.current?.width || 0;
+          mixerCanvasRef.current.height = canvasRef.current?.height || 0;
+          drawSecondaryWaveform(mixerCanvasRef.current, placedClips, mainTrack.viewStartTime, mainTrack.viewEndTime);
+       } else {
+          const ctx = mixerCanvasRef.current.getContext('2d');
+          if (ctx) ctx.clearRect(0, 0, mixerCanvasRef.current.width, mixerCanvasRef.current.height);
+       }
+    }
+  }, [placedClips, showMixerOnMain, mainTrack.viewStartTime, mainTrack.viewEndTime, mainTrack.buffer]);
 
   // Update selection overlay & playhead visibility
   useEffect(() => {
@@ -274,6 +297,24 @@ export default function MainEditor() {
     }
   };
 
+  // Global Keyboard Shortcuts for Editor
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+
+      const key = e.key.toLowerCase();
+      const s = settings.shortcuts;
+      
+      if (key === s.extract) { e.preventDefault(); handleAction('extract'); return; }
+      if (key === s.amplify) { e.preventDefault(); handleAction('amplify'); return; }
+      if (key === s.cutout) { e.preventDefault(); handleAction('cutout'); return; }
+      if (key === s.keep) { e.preventDefault(); handleAction('keep'); return; }
+    };
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [settings.shortcuts, handleAction]);
+
   const performSearch = async () => {
     if (!mainTrack.buffer) return;
     setLoading(true, "分析中...");
@@ -408,17 +449,20 @@ export default function MainEditor() {
           onPointerLeave={() => { handlePointerUp({} as any); setGlobalHoverTime(null); }}
         >
           {/* Canvas (Base Layer) */}
-          <canvas ref={canvasRef} className="block w-full h-full" />
+          <canvas ref={canvasRef} className="block w-full h-full relative z-0" />
+          
+          {/* Secondary Canvas for Mixer Overlay */}
+          <canvas ref={mixerCanvasRef} className={`absolute top-0 left-0 w-full h-full pointer-events-none z-0 mix-blend-multiply opacity-80 ${showMixerOnMain ? 'block' : 'hidden'}`} />
           
           {/* Overlays (Interactive & Visual Layers on top of Canvas) */}
           <div className="absolute inset-0 pointer-events-none z-10">
             {/* Playhead (Red) */}
-            <div ref={playheadRef} className="absolute w-[2px] h-full bg-danger top-0 left-0 hidden" />
+            <div ref={playheadRef} className="absolute w-[2px] h-full bg-danger top-0 left-0 hidden shadow-[0_0_4px_rgba(239,68,68,0.8)] z-30" />
             
             {/* Selection Start Orange Cursor */}
             {!mainTrack.sourceNode && mainTrack.selectionStart >= mainTrack.viewStartTime && mainTrack.selectionStart <= mainTrack.viewEndTime && (
                <div 
-                 className="absolute w-[2px] h-full bg-orange-500 top-0" 
+                 className="absolute w-[2px] h-full bg-orange-500 top-0 shadow-[0_0_4px_rgba(249,115,22,0.8)] z-30" 
                  style={{ left: `${((mainTrack.selectionStart - mainTrack.viewStartTime) / (mainTrack.viewEndTime - mainTrack.viewStartTime)) * 100}%` }}
                >
                  <div className="absolute top-6 left-0 transform -translate-x-1/2 bg-orange-500 text-white px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap shadow-sm min-w-max pointer-events-auto">
@@ -434,27 +478,20 @@ export default function MainEditor() {
               const right = Math.min(100, ((seg.end - mainTrack.viewStartTime) / (mainTrack.viewEndTime - mainTrack.viewStartTime)) * 100);
               const width = right - left;
               return (
-                <div key={`search-${idx}`} className={`absolute top-0 h-full ${idx === currentSegmentIndex ? 'bg-success/40' : 'bg-success/20 border-r border-success/30'}`} style={{ left: `${left}%`, width: `${width}%` }} />
-              );
-            })}
-
-            {/* Mixer Overlay (Show Mixed on Main) */}
-            {showMixerOnMain && placedClips.map((pClip) => {
-              if (pClip.startTime + pClip.buffer.duration < mainTrack.viewStartTime || pClip.startTime > mainTrack.viewEndTime) return null;
-              const left = Math.max(0, ((pClip.startTime - mainTrack.viewStartTime) / (mainTrack.viewEndTime - mainTrack.viewStartTime)) * 100);
-              const right = Math.min(100, (((pClip.startTime + pClip.buffer.duration) - mainTrack.viewStartTime) / (mainTrack.viewEndTime - mainTrack.viewStartTime)) * 100);
-              const width = right - left;
-              return (
-                <div key={`mixer-overlay-${pClip.id}`} className="absolute top-1/2 bottom-0 border border-primary/40 bg-primary/20 rounded-t-sm flex items-end overflow-hidden" style={{ left: `${left}%`, width: `${width}%` }}>
-                   <p className="text-[10px] text-primary font-bold px-1 whitespace-nowrap truncate mb-1">混音: {clips.find(c => c.id === pClip.sourceClipId)?.name || '片段'}</p>
-                </div>
+                <div key={`search-${idx}`} 
+                     className={`absolute top-0 h-full box-border shadow-sm z-10 ${
+                       idx === currentSegmentIndex 
+                         ? 'bg-green-400/60 border-x-2 border-green-600' 
+                         : 'bg-green-300/40 border-r border-green-500/50'
+                     }`} 
+                     style={{ left: `${left}%`, width: `${width}%` }} />
               );
             })}
 
             {/* Hover indicator */}
             {globalHoverTime !== null && globalHoverTime >= mainTrack.viewStartTime && globalHoverTime <= mainTrack.viewEndTime && (
               <div 
-                className="absolute w-[2px] h-full bg-secondary top-0 z-[5]" 
+                className="absolute w-[2px] h-full bg-secondary top-0 z-20" 
                 style={{ left: `${((globalHoverTime - mainTrack.viewStartTime) / (mainTrack.viewEndTime - mainTrack.viewStartTime)) * 100}%` }}
               >
                 <div className="absolute top-1 left-0 transform -translate-x-1/2 bg-black/80 text-white px-2 py-0.5 rounded text-[10px] whitespace-nowrap min-w-max">
@@ -464,7 +501,7 @@ export default function MainEditor() {
             )}
             
             {/* Selection Overlay */}
-            <div ref={overlayRef} className="absolute top-5 h-[calc(100%-20px)] bg-primary/20 border-x-2 border-primary box-border hidden z-20 pointer-events-none" />
+            <div ref={overlayRef} className="absolute top-5 h-[calc(100%-20px)] bg-yellow-300/30 border-x-2 border-yellow-500 box-border hidden z-20 pointer-events-none shadow-[inset_0_0_10px_rgba(234,179,8,0.2)]" />
           </div>
         </div>
 

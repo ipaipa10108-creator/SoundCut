@@ -21,7 +21,8 @@ export default function MixerTrack() {
     setIsPlayingMixed,
     updateMainTrack,
     globalHoverTime,
-    setGlobalHoverTime
+    setGlobalHoverTime,
+    settings
   } = useAudioStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -212,6 +213,21 @@ export default function MixerTrack() {
       };
     }
   };
+
+  // Keyboard shortcut for preview
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+
+      if (e.key.toLowerCase() === settings.shortcuts.preview) {
+        e.preventDefault();
+        togglePlayAll();
+      }
+    };
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [settings.shortcuts.preview, togglePlayAll]);
 
   const handleExportMixed = async () => {
     if (!mainTrack.buffer || !audioContext) {
