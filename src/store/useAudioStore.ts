@@ -29,6 +29,7 @@ const defaultSettings: Settings = {
   },
   seekStep: 1.0,
   mobileModalMode: false,
+  showHoverHz: false,
 };
 
 interface AudioStore {
@@ -64,6 +65,8 @@ interface AudioStore {
   // Extension Features
   globalHoverTime: number | null;
   setGlobalHoverTime: (time: number | null) => void;
+  globalHoverHz: number | null;
+  setGlobalHoverHz: (hz: number | null) => void;
   showClipsModal: boolean;
   setShowClipsModal: (show: boolean) => void;
   showMixerOnMain: boolean;
@@ -154,6 +157,8 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
   // Extension features implementations
   globalHoverTime: null,
   setGlobalHoverTime: (time) => set({ globalHoverTime: time }),
+  globalHoverHz: null,
+  setGlobalHoverHz: (hz) => set({ globalHoverHz: hz }),
   showClipsModal: false,
   setShowClipsModal: (show) => set({ showClipsModal: show }),
   showMixerOnMain: false,

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAudioStore } from '../store/useAudioStore';
 import { drawWaveform, drawSecondaryWaveform, formatRulerTime } from '../utils/waveformDraw';
 import { Play, Pause, Scissors, Volume2, Target, Search, Layers, X } from 'lucide-react';
-import { amplifyBufferRegion, cutoutBufferRegion, sliceAudioBuffer, findSegmentsByVolume, findSegmentsByFrequency } from '../utils/audioOperations';
+import { amplifyBufferRegion, cutoutBufferRegion, sliceAudioBuffer, findSegmentsByVolume, findSegmentsByFrequency, estimateFrequencyAtTime } from '../utils/audioOperations';
 import type { Segment } from '../types/audio';
 import MixerTrack from './MixerTrack';
 
@@ -22,6 +22,8 @@ export default function MainEditor() {
     speedAccumulatedTime,
     globalHoverTime,
     setGlobalHoverTime,
+    globalHoverHz,
+    setGlobalHoverHz,
     pushHistory,
     undo,
     redo,
@@ -154,8 +156,14 @@ export default function MainEditor() {
     // Hover logic
     if (currentSeconds >= 0 && currentSeconds <= mainTrack.buffer.duration) {
       setGlobalHoverTime(currentSeconds);
+      if (settings.showHoverHz) {
+        setGlobalHoverHz(estimateFrequencyAtTime(mainTrack.buffer, currentSeconds));
+      } else {
+        setGlobalHoverHz(null);
+      }
     } else {
       setGlobalHoverTime(null);
+      setGlobalHoverHz(null);
     }
 
     // Drag logic
@@ -272,7 +280,7 @@ export default function MainEditor() {
         pushHistory(mainTrack.buffer);
         setLoading(true, "正在增強音量...");
         const newBuf = await amplifyBufferRegion(audioContext, mainTrack.buffer, selectionStart, selectionEnd, parseFloat(gainValue));
-        updateMainTrack({ buffer: newBuf, selectionStart: 0, selectionEnd: newBuf.duration, viewStartTime: 0, viewEndTime: newBuf.duration });
+        updateMainTrack({ buffer: newBuf, selectionStart: mainTrack.selectionStart, selectionEnd: mainTrack.selectionEnd, viewStartTime: mainTrack.viewStartTime, viewEndTime: mainTrack.viewEndTime });
         setLoading(false, '音量已增強！');
       }
       else if (action === 'cutout') {
@@ -446,7 +454,7 @@ export default function MainEditor() {
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          onPointerLeave={() => { handlePointerUp({} as any); setGlobalHoverTime(null); }}
+          onPointerLeave={() => { handlePointerUp({} as any); setGlobalHoverTime(null); setGlobalHoverHz(null); }}
         >
           {/* Canvas (Base Layer) */}
           <canvas ref={canvasRef} className="block w-full h-full relative z-0" />
@@ -494,8 +502,11 @@ export default function MainEditor() {
                 className="absolute w-[2px] h-full bg-secondary top-0 z-20" 
                 style={{ left: `${((globalHoverTime - mainTrack.viewStartTime) / (mainTrack.viewEndTime - mainTrack.viewStartTime)) * 100}%` }}
               >
-                <div className="absolute top-1 left-0 transform -translate-x-1/2 bg-black/80 text-white px-2 py-0.5 rounded text-[10px] whitespace-nowrap min-w-max">
-                  {formatRulerTime(globalHoverTime)}
+                <div className="absolute top-1 left-0 transform -translate-x-1/2 bg-black/80 text-white px-2 py-0.5 rounded text-[10px] whitespace-nowrap min-w-max flex flex-col items-center">
+                  <span>{formatRulerTime(globalHoverTime)}</span>
+                  {settings.showHoverHz && globalHoverHz !== null && (
+                    <span className="text-secondary-light font-mono opacity-90">{globalHoverHz} Hz</span>
+                  )}
                 </div>
               </div>
             )}

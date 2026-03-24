@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useAudioStore } from '../store/useAudioStore';
 import { drawSecondaryWaveform, formatRulerTime } from '../utils/waveformDraw';
 import { mixTracks, bufferToWav, bufferToMp3 } from '../utils/audioExport';
+import { estimateFrequencyAtTime } from '../utils/audioOperations';
 import { Play, Pause, Download } from 'lucide-react';
 
 export default function MixerTrack() {
@@ -22,6 +23,8 @@ export default function MixerTrack() {
     updateMainTrack,
     globalHoverTime,
     setGlobalHoverTime,
+    globalHoverHz,
+    setGlobalHoverHz,
     settings
   } = useAudioStore();
 
@@ -74,13 +77,20 @@ export default function MixerTrack() {
     
     if (currentSeconds >= 0 && currentSeconds <= mainTrack.buffer.duration) {
       setGlobalHoverTime(currentSeconds);
+      if (settings.showHoverHz) {
+        setGlobalHoverHz(estimateFrequencyAtTime(mainTrack.buffer, currentSeconds));
+      } else {
+        setGlobalHoverHz(null);
+      }
     } else {
       setGlobalHoverTime(null);
+      setGlobalHoverHz(null);
     }
   };
 
   const handlePointerLeave = () => {
     setGlobalHoverTime(null);
+    setGlobalHoverHz(null);
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -309,8 +319,11 @@ export default function MixerTrack() {
             className="absolute w-[2px] h-full bg-secondary top-0 pointer-events-none z-[5]" 
             style={{ left: `${((globalHoverTime - mainTrack.viewStartTime) / (mainTrack.viewEndTime - mainTrack.viewStartTime)) * 100}%` }}
           >
-            <div className="absolute top-1 left-0 transform -translate-x-1/2 bg-black/80 text-white px-2 py-0.5 rounded text-[10px] whitespace-nowrap min-w-max">
-              {formatRulerTime(globalHoverTime)}
+            <div className="absolute top-1 left-0 transform -translate-x-1/2 bg-black/80 text-white px-2 py-0.5 rounded text-[10px] whitespace-nowrap min-w-max flex flex-col items-center pointer-events-none">
+              <span>{formatRulerTime(globalHoverTime)}</span>
+              {settings.showHoverHz && globalHoverHz !== null && (
+                <span className="text-secondary-light font-mono opacity-90">{globalHoverHz} Hz</span>
+              )}
             </div>
           </div>
         )}

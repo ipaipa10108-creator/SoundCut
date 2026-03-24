@@ -1,6 +1,7 @@
 import type { PlacedClip } from '../types/audio';
 // @ts-ignore
-import lamejs from 'lamejs';
+import * as lamejsModule from 'lamejs';
+const lamejs = (lamejsModule as any).default || lamejsModule;
 
 export function mixTracks(
   audioContext: AudioContext,
@@ -26,9 +27,10 @@ export function mixTracks(
   // 2. 混入其他片段
   for (const pClip of placedClips) {
     const startOffset = Math.round(pClip.startTime * sampleRate);
+    const clipChannels = pClip.buffer.numberOfChannels;
     for (let i = 0; i < numChannels; i++) {
       const mixedData = mixedBuffer.getChannelData(i);
-      const clipData = pClip.buffer.getChannelData(i);
+      const clipData = pClip.buffer.getChannelData(Math.min(i, clipChannels - 1));
       for (let j = 0; j < clipData.length; j++) {
         const mixIndex = startOffset + j;
         if (mixIndex < totalLength) {
@@ -119,7 +121,9 @@ export function bufferToMp3(buffer: AudioBuffer): Blob {
     const rightChunk = right.subarray(i, i + sampleBlockSize);
     
     // Only encode full blocks or remaining
-    const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+    const mp3buf = numChannels > 1 
+      ? mp3encoder.encodeBuffer(leftChunk, rightChunk)
+      : mp3encoder.encodeBuffer(leftChunk);
     if (mp3buf.length > 0) {
       mp3Data.push(mp3buf);
     }

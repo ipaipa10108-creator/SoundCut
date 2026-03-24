@@ -39,6 +39,7 @@ export interface Settings {
   };
   seekStep: number;
   mobileModalMode: boolean;
+  showHoverHz: boolean;
 }
 
 export interface Segment {

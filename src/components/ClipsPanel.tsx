@@ -45,8 +45,9 @@ export default function ClipsPanel() {
       
       let offset = 0;
       for (const clip of clipsToCombine) {
+        const clipChannels = clip.buffer.numberOfChannels;
         for (let i = 0; i < numChannels; i++) {
-          combinedBuffer.getChannelData(i).set(clip.buffer.getChannelData(i), offset);
+          combinedBuffer.getChannelData(i).set(clip.buffer.getChannelData(Math.min(i, clipChannels - 1)), offset);
         }
         offset += clip.buffer.length;
       }

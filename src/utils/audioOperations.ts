@@ -163,3 +163,34 @@ export async function findSegmentsByFrequency(buffer: AudioBuffer, thresholdValu
     }
   });
 }
+
+/**
+ * 估算給定時間點附近的音訊頻率 (Hz)
+ */
+export function estimateFrequencyAtTime(buffer: AudioBuffer, timeSeconds: number): number | null {
+  const sampleRate = buffer.sampleRate;
+  const channelData = buffer.getChannelData(0);
+  
+  // 取 timeSeconds 附近一小段 window (例如 2048 samples)
+  const windowSize = 2048;
+  const centerSample = Math.round(timeSeconds * sampleRate);
+  const startSample = Math.max(0, centerSample - Math.floor(windowSize / 2));
+  const endSample = Math.min(channelData.length, startSample + windowSize);
+  
+  const chunk = channelData.subarray(startSample, endSample);
+  if (chunk.length < 2) return null;
+
+  let crossings = 0;
+  for (let i = 1; i < chunk.length; i++) {
+    // Zero crossing detection
+    if ((chunk[i] > 0 && chunk[i - 1] <= 0) || (chunk[i] < 0 && chunk[i - 1] >= 0)) {
+      crossings++;
+    }
+  }
+
+  const windowDuration = chunk.length / sampleRate;
+  if (windowDuration === 0) return null;
+  
+  const frequency = (crossings / 2) / windowDuration;
+  return Math.round(frequency);
+}

@@ -27,6 +27,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
         },
         seekStep: 1.0,
         mobileModalMode: false,
+        showHoverHz: false,
       };
       setLocalSettings(defaultSettings);
       updateSettings(defaultSettings);
@@ -108,6 +109,22 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                   className="sr-only peer" 
                   checked={localSettings.mobileModalMode}
                   onChange={(e) => setLocalSettings(prev => ({ ...prev, mobileModalMode: e.target.checked }))}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100 mb-4">
+              <div>
+                <p className="font-medium text-gray-700">游標懸停時顯示頻率 (Hz)</p>
+                <p className="text-sm text-gray-500">啟用後，在波形上滑動時，時間下方會顯示對應的頻率數值，直觀得知聲音變化。</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={localSettings.showHoverHz}
+                  onChange={(e) => setLocalSettings(prev => ({ ...prev, showHoverHz: e.target.checked }))}
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
