@@ -1,0 +1,24 @@
+Testing WAV Mono:
+WAV Mono OK
+Testing WAV Stereo:
+WAV Stereo OK
+Testing MP3 Mono:
+MP3 Mono ERR: ReferenceError: MPEGMode is not defined
+    at lame_init_old (C:\Users\User\Desktop\@Antigravity\SoundCut\node_modules\lamejs\src\js\Lame.js:135:20)
+    at Lame.lame_init (C:\Users\User\Desktop\@Antigravity\SoundCut\node_modules\lamejs\src\js\Lame.js:229:19)
+    at new Mp3Encoder (C:\Users\User\Desktop\@Antigravity\SoundCut\node_modules\lamejs\src\js\index.js:100:20)
+    at bufferToMp3 (C:\Users\User\Desktop\@Antigravity\SoundCut\src\utils\audioExport.ts:101:22)
+    at <anonymous> (C:\Users\User\Desktop\@Antigravity\SoundCut\test_audio_export.ts:41:3)
+    at ModuleJob.run (node:internal/modules/esm/module_job:271:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:547:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5)
+Testing MP3 Stereo:
+MP3 Stereo ERR: ReferenceError: MPEGMode is not defined
+    at lame_init_old (C:\Users\User\Desktop\@Antigravity\SoundCut\node_modules\lamejs\src\js\Lame.js:135:20)
+    at Lame.lame_init (C:\Users\User\Desktop\@Antigravity\SoundCut\node_modules\lamejs\src\js\Lame.js:229:19)
+    at new Mp3Encoder (C:\Users\User\Desktop\@Antigravity\SoundCut\node_modules\lamejs\src\js\index.js:100:20)
+    at bufferToMp3 (C:\Users\User\Desktop\@Antigravity\SoundCut\src\utils\audioExport.ts:101:22)
+    at <anonymous> (C:\Users\User\Desktop\@Antigravity\SoundCut\test_audio_export.ts:47:3)
+    at ModuleJob.run (node:internal/modules/esm/module_job:271:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:547:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5)

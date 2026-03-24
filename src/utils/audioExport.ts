@@ -1,7 +1,8 @@
 import type { PlacedClip } from '../types/audio';
 // @ts-ignore
-import * as lamejsModule from 'lamejs';
-const lamejs = (lamejsModule as any).default || lamejsModule;
+// @ts-ignore
+import * as lamejsModule from 'lamejs/lame.all.js';
+const lamejs = (lamejsModule as any).default || lamejsModule || (window as any).lamejs;
 
 export function mixTracks(
   audioContext: AudioContext,
@@ -136,3 +137,5 @@ export function bufferToMp3(buffer: AudioBuffer): Blob {
 
   return new Blob(mp3Data, { type: 'audio/mp3' });
 }
+
+export const __lamejs_for_test = lamejs;
