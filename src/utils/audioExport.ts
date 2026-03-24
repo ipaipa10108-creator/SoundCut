@@ -1,8 +1,9 @@
 import type { PlacedClip } from '../types/audio';
-// @ts-ignore
-// @ts-ignore
-import * as lamejsModule from 'lamejs/lame.all.js';
-const lamejs = (lamejsModule as any).default || lamejsModule || (window as any).lamejs;
+
+// lamejs は index.html で <script src="/lame.min.js"> として読み込まれ、window.lamejs として利用可能
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getLamejs = () => (window as any).lamejs;
+
 
 export function mixTracks(
   audioContext: AudioContext,
@@ -99,7 +100,7 @@ export function bufferToMp3(buffer: AudioBuffer): Blob {
   const sampleRate = buffer.sampleRate;
   const kbps = 128; // default to 128kbps
 
-  const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, kbps);
+  const mp3encoder = new (getLamejs().Mp3Encoder)(numChannels, sampleRate, kbps);
   const samples = [];
 
   // Convert float32 to int16
@@ -137,5 +138,3 @@ export function bufferToMp3(buffer: AudioBuffer): Blob {
 
   return new Blob(mp3Data, { type: 'audio/mp3' });
 }
-
-export const __lamejs_for_test = lamejs;
