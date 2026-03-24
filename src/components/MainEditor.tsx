@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAudioStore } from '../store/useAudioStore';
 import { drawWaveform, drawSecondaryWaveform, formatRulerTime } from '../utils/waveformDraw';
-import { Play, Pause, Scissors, Volume2, Target, Search, Layers, X } from 'lucide-react';
+import { Play, Pause, Scissors, Volume2, Target, Search, Layers, X, AlignLeft, Download } from 'lucide-react';
 import { amplifyBufferRegion, cutoutBufferRegion, sliceAudioBuffer, findSegmentsByVolume, findSegmentsByFrequency, estimateFrequencyAtTime } from '../utils/audioOperations';
+import { bufferToWav, bufferToMp3 } from '../utils/audioExport';
 import type { Segment } from '../types/audio';
 import MixerTrack from './MixerTrack';
 
@@ -50,6 +51,7 @@ export default function MainEditor() {
 
   const [showMobileOps, setShowMobileOps] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [useMinSec, setUseMinSec] = useState(false); // 時間格式: false=秒, true=分:秒
   const isSelectionActive = (mainTrack.selectionEnd - mainTrack.selectionStart) > 0.001;
 
   // Drawing waveform
@@ -209,7 +211,11 @@ export default function MainEditor() {
   const zoom = (factor: number) => {
     if (!mainTrack.buffer) return;
     const currentDuration = mainTrack.viewEndTime - mainTrack.viewStartTime;
-    const center = mainTrack.viewStartTime + currentDuration / 2;
+    // 如果有選取範圍，以選取範圍中心為基準縮放；否則以視圖中心
+    const selActive = isSelectionActive;
+    const center = selActive
+      ? (mainTrack.selectionStart + mainTrack.selectionEnd) / 2
+      : mainTrack.viewStartTime + currentDuration / 2;
     let newDuration = currentDuration * factor;
     newDuration = Math.max(0.01, Math.min(newDuration, mainTrack.buffer.duration));
     
@@ -217,6 +223,64 @@ export default function MainEditor() {
       viewStartTime: Math.max(0, center - newDuration / 2),
       viewEndTime: Math.min(mainTrack.buffer.duration, center + newDuration / 2)
     });
+  };
+
+  // 全選整個主音軌
+  const selectAll = () => {
+    if (!mainTrack.buffer) return;
+    updateMainTrack({
+      selectionStart: 0,
+      selectionEnd: mainTrack.buffer.duration,
+    });
+  };
+
+  // 匯出選取範圍（如有選取）或整個主音軌
+  const handleExportMain = async () => {
+    if (!mainTrack.buffer || !audioContext) return;
+    const format = prompt("請選擇匯出格式：'mp3' 或 'wav'", "mp3")?.toLowerCase();
+    if (!format || (format !== 'mp3' && format !== 'wav')) return;
+
+    const hasSelection = isSelectionActive;
+    const label = hasSelection ? '選取範圍' : '整個音軌';
+    setLoading(true, `正在匯出 ${label} 為 ${format.toUpperCase()}...`);
+    await new Promise(r => setTimeout(r, 50));
+    try {
+      const exportBuffer = hasSelection
+        ? sliceAudioBuffer(audioContext, mainTrack.buffer, mainTrack.selectionStart, mainTrack.selectionEnd)
+        : mainTrack.buffer;
+      const blob = format === 'mp3' ? bufferToMp3(exportBuffer) : bufferToWav(exportBuffer);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `SoundCut_${hasSelection ? 'selection' : 'full'}_${Date.now()}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setLoading(false, `${label}匯出成功！`);
+    } catch (e) {
+      console.error(e);
+      setLoading(false, '匯出時發生錯誤。');
+    }
+  };
+
+  // 將秒數轉換為分:秒格式字串
+  const secondsToMinSec = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = (s - m * 60).toFixed(2).padStart(5, '0');
+    return `${m}:${sec}`;
+  };
+
+  // 將分:秒格式字串轉換為秒數
+  const minSecToSeconds = (str: string): number => {
+    const parts = str.split(':');
+    if (parts.length === 2) {
+      const m = parseFloat(parts[0]) || 0;
+      const sec = parseFloat(parts[1]) || 0;
+      return m * 60 + sec;
+    }
+    return parseFloat(str) || 0;
   };
 
   const playSelection = () => {
@@ -416,6 +480,9 @@ export default function MainEditor() {
 
   const renderOperationsControls = () => (
     <div className="flex flex-wrap gap-2">
+      <button className="btn btn-default flex-1 sm:flex-none" onClick={selectAll} title="全選整個音軌" disabled={!mainTrack.buffer}>
+        <AlignLeft size={16} /> 全選
+      </button>
       <button className="btn btn-primary flex-1 sm:flex-none" onClick={playSelection}>
         {mainTrack.sourceNode ? <Pause size={18} /> : <Play size={18} />}
       </button>
@@ -430,6 +497,9 @@ export default function MainEditor() {
       </button>
       <button className="btn btn-warning" onClick={() => handleAction('keep')} disabled={!isSelectionActive}>
         保留
+      </button>
+      <button className="btn btn-default" onClick={handleExportMain} disabled={!mainTrack.buffer} title={isSelectionActive ? '匯出選取範圍' : '匯出整個音軌'}>
+        <Download size={16} className="text-primary" /> {isSelectionActive ? '匯出選區' : '匯出'}
       </button>
     </div>
   );
@@ -549,35 +619,70 @@ export default function MainEditor() {
         
         {/* Manual Time Inputs */}
         <div className="bg-gray-50 border-t p-2 px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
              <label className="flex items-center gap-2 font-medium border-none shadow-none text-gray-700 bg-transparent">
                選取起點:
-               <input 
-                 type="number" step="0.1" min="0" 
-                 className="input !py-1 w-20 font-mono text-right bg-white"
-                 value={mainTrack.selectionStart.toFixed(2)}
-                 onChange={e => {
-                   const v = parseFloat(e.target.value);
-                   if(!isNaN(v)) updateMainTrack({ selectionStart: Math.min(v, mainTrack.selectionEnd) });
-                 }}
-               />
+               {useMinSec ? (
+                 <input
+                   type="text"
+                   className="input !py-1 w-24 font-mono text-right bg-white"
+                   value={secondsToMinSec(mainTrack.selectionStart)}
+                   onChange={e => {
+                     const v = minSecToSeconds(e.target.value);
+                     if (!isNaN(v)) updateMainTrack({ selectionStart: Math.min(v, mainTrack.selectionEnd) });
+                   }}
+                   placeholder="m:ss.xx"
+                 />
+               ) : (
+                 <input 
+                   type="number" step="0.1" min="0" 
+                   className="input !py-1 w-20 font-mono text-right bg-white"
+                   value={mainTrack.selectionStart.toFixed(2)}
+                   onChange={e => {
+                     const v = parseFloat(e.target.value);
+                     if(!isNaN(v)) updateMainTrack({ selectionStart: Math.min(v, mainTrack.selectionEnd) });
+                   }}
+                 />
+               )}
              </label>
              <label className="flex items-center gap-2 font-medium border-none shadow-none text-gray-700 bg-transparent">
                選取終點:
-               <input 
-                 type="number" step="0.1" min="0" 
-                 className="input !py-1 w-20 font-mono text-right bg-white"
-                 value={mainTrack.selectionEnd.toFixed(2)}
-                 onChange={e => {
-                   const v = parseFloat(e.target.value);
-                   if(!isNaN(v)) updateMainTrack({ selectionEnd: Math.max(v, mainTrack.selectionStart) });
-                 }}
+               {useMinSec ? (
+                 <input
+                   type="text"
+                   className="input !py-1 w-24 font-mono text-right bg-white"
+                   value={secondsToMinSec(mainTrack.selectionEnd)}
+                   onChange={e => {
+                     const v = minSecToSeconds(e.target.value);
+                     if (!isNaN(v)) updateMainTrack({ selectionEnd: Math.max(v, mainTrack.selectionStart) });
+                   }}
+                   placeholder="m:ss.xx"
+                 />
+               ) : (
+                 <input 
+                   type="number" step="0.1" min="0" 
+                   className="input !py-1 w-20 font-mono text-right bg-white"
+                   value={mainTrack.selectionEnd.toFixed(2)}
+                   onChange={e => {
+                     const v = parseFloat(e.target.value);
+                     if(!isNaN(v)) updateMainTrack({ selectionEnd: Math.max(v, mainTrack.selectionStart) });
+                   }}
+                 />
+               )}
+             </label>
+             <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+               <input
+                 type="checkbox"
+                 className="w-3.5 h-3.5 text-primary rounded cursor-pointer"
+                 checked={useMinSec}
+                 onChange={e => setUseMinSec(e.target.checked)}
                />
+               分:秒格式
              </label>
           </div>
           {mainTrack.buffer && (
             <span className="font-mono bg-white border border-gray-200 px-3 py-1 rounded-full whitespace-nowrap text-xs shadow-sm">
-              總時長: {mainTrack.buffer.duration.toFixed(2)}s
+              總時長: {secondsToMinSec(mainTrack.buffer.duration)}
             </span>
           )}
         </div>
