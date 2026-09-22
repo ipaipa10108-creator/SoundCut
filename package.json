@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {
     "lamejs": "^1.2.1",
@@ -35,5 +36,6 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.0"
-  }
+  },
+  "packageManager": "pnpm@10.33.0"
 }
