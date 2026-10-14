@@ -6,6 +6,7 @@ import Header from './components/Header';
 import SettingsModal from './components/SettingsModal';
 import ClipEditorModal from './components/ClipEditorModal';
 import FileUploader from './components/FileUploader';
+import AudioRepairModal from './components/AudioRepairModal';
 
 function App() {
   const { 
@@ -25,6 +26,7 @@ function App() {
   } = useAudioStore();
   
   const [showSettings, setShowSettings] = useState(false);
+  const [showRepairModal, setShowRepairModal] = useState(false);
 
   useEffect(() => {
     const handleGlobalKeydown = (e: KeyboardEvent) => {
@@ -78,10 +80,15 @@ function App() {
         
         {/* Editor Panel */}
         <div className={`flex flex-col bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 relative transition-all duration-300 ease-in-out w-full`}>
-          <Header onOpenSettings={() => setShowSettings(true)} />
+          <Header 
+            onOpenSettings={() => setShowSettings(true)} 
+            onOpenRepair={() => setShowRepairModal(true)} 
+          />
           
           <div className="mt-8">
-            {!mainTrack.buffer && <FileUploader />}
+            {!mainTrack.buffer && (
+              <FileUploader onOpenRepairModal={() => setShowRepairModal(true)} />
+            )}
 
             {isLoading && (
               <div className="flex flex-col items-center justify-center my-8">
@@ -97,7 +104,7 @@ function App() {
             {/* Main Workspace */}
             {mainTrack.buffer && (
               <div className="mt-6 flex flex-col gap-8 animate-fade-in">
-                <MainEditor />
+                <MainEditor onOpenRepair={() => setShowRepairModal(true)} />
               </div>
             )}
           </div>
@@ -113,6 +120,7 @@ function App() {
       )}
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showRepairModal && <AudioRepairModal onClose={() => setShowRepairModal(false)} />}
       <ClipEditorModal />
     </div>
   );

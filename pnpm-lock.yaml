@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      benz-amr-recorder:
+        specifier: ^1.1.5
+        version: 1.1.5
       lamejs:
         specifier: ^1.2.1
         version: 1.2.1
@@ -491,6 +494,12 @@ packages:
     resolution: {integrity: sha512-sUoJ3IMxx4AyRqO4MLeHlnGDkyXRoUG0/AI9fjK+vS72ekpV0yWVY7O0BVjmBcRtkNcsAO2QDZ4tdKKGoI6YaQ==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  benz-amr-recorder@1.1.5:
+    resolution: {integrity: sha512-NepctcNTsZHK8NxBb5uKO5p8S+xkbm+vD6GLSkCYdJeEsriexvgumLHpDkanX4QJBcLRMVtg16buWMs+gUPB3g==}
+
+  benz-recorderjs@1.0.5:
+    resolution: {integrity: sha512-EwedOQo9KLti7HxDi/eZY51PSRbAXnOdEZmLvJ6ro3QQSoF9Y3AXBt57MIllGvVz5vtFYMeikG+GD7qTm3+p9w==}
 
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
@@ -1820,6 +1829,12 @@ snapshots:
   balanced-match@4.0.4: {}
 
   baseline-browser-mapping@2.10.10: {}
+
+  benz-amr-recorder@1.1.5:
+    dependencies:
+      benz-recorderjs: 1.0.5
+
+  benz-recorderjs@1.0.5: {}
 
   binary-extensions@2.3.0: {}
 

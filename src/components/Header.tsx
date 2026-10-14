@@ -1,7 +1,12 @@
-import { Settings, Layers } from 'lucide-react';
+import { Settings, Layers, ShieldCheck } from 'lucide-react';
 import { useAudioStore } from '../store/useAudioStore';
 
-export default function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
+interface HeaderProps {
+  onOpenSettings: () => void;
+  onOpenRepair: () => void;
+}
+
+export default function Header({ onOpenSettings, onOpenRepair }: HeaderProps) {
   const { setShowClipsModal, clips } = useAudioStore();
   
   return (
@@ -13,10 +18,21 @@ export default function Header({ onOpenSettings }: { onOpenSettings: () => void 
           </div>
           SoundCut
         </h1>
-        <p className="text-gray-500 mt-2 text-center md:text-left">分析、編輯、剪輯、組合、匯出，您的音訊處理中心。</p>
+        <p className="text-gray-500 mt-2 text-center md:text-left">
+          分析、編輯、剪輯、修復、匯出，您的專業音訊處理中心。
+        </p>
       </div>
 
-      <div className="flex justify-center md:justify-end items-center gap-3">
+      <div className="flex flex-wrap justify-center md:justify-end items-center gap-2.5">
+        <button 
+          className="btn btn-default flex items-center gap-2 hover:border-primary/40 hover:text-primary transition-colors"
+          onClick={onOpenRepair}
+          title="音檔檢查與修復工具 (支援 .arm/.amr/WAV/MP3 診斷與修復)"
+        >
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>檢查修復</span>
+        </button>
+
         <button 
           className="btn btn-default flex items-center gap-2"
           onClick={() => setShowClipsModal(true)}

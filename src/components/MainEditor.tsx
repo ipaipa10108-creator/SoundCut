@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAudioStore } from '../store/useAudioStore';
 import { drawWaveform, drawSecondaryWaveform, formatRulerTime } from '../utils/waveformDraw';
-import { Play, Pause, Scissors, Volume2, Target, Search, Layers, X, AlignLeft, Download } from 'lucide-react';
+import { Play, Pause, Scissors, Volume2, Target, Search, Layers, X, AlignLeft, Download, Wrench } from 'lucide-react';
 import { amplifyBufferRegion, cutoutBufferRegion, sliceAudioBuffer, findSegmentsByVolume, findSegmentsByFrequency, estimateFrequencyAtTime } from '../utils/audioOperations';
 import { bufferToWav, bufferToMp3 } from '../utils/audioExport';
 import type { Segment } from '../types/audio';
 import MixerTrack from './MixerTrack';
 
-export default function MainEditor() {
+interface MainEditorProps {
+  onOpenRepair?: () => void;
+}
+
+export default function MainEditor({ onOpenRepair }: MainEditorProps = {}) {
   const { 
     mainTrack, 
     updateMainTrack, 
@@ -501,6 +505,16 @@ export default function MainEditor() {
       <button className="btn btn-default" onClick={handleExportMain} disabled={!mainTrack.buffer} title={isSelectionActive ? '匯出選取範圍' : '匯出整個音軌'}>
         <Download size={16} className="text-primary" /> {isSelectionActive ? '匯出選區' : '匯出'}
       </button>
+      {onOpenRepair && (
+        <button 
+          className="btn btn-default" 
+          onClick={onOpenRepair} 
+          disabled={!mainTrack.buffer} 
+          title="音訊健康度檢查與修復 (消除直流偏移、消除削波、標準化等)"
+        >
+          <Wrench size={16} className="text-emerald-600" /> 診斷修復
+        </button>
+      )}
     </div>
   );
 
